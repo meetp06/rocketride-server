@@ -545,8 +545,8 @@ def test_update_status_errors_buffer_trims_to_limit():
     assert 'err-0' not in t._status.errors  # oldest evicted
 
 
-def test_update_status_warning_event_appends_and_trims():
-    """An ``apaevt_status_warning`` event appends to warnings with the same history cap."""
+def test_update_status_warning_event_appends_to_warnings():
+    """An ``apaevt_status_warning`` event appends to ``status.warnings``."""
     t = _task(status=_make_status_for_update())
     Task._update_status(
         t,
@@ -556,6 +556,22 @@ def test_update_status_warning_event_appends_and_trims():
         },
     )
     assert t._status.warnings == ['memory pressure']
+
+
+def test_update_status_warnings_buffer_trims_to_limit():
+    """Warning buffer keeps only the most recent CONST_STATUS_HISTORY_LIMIT entries."""
+    t = _task(status=_make_status_for_update())
+    t._status.warnings = [f'warn-{i}' for i in range(CONST_STATUS_HISTORY_LIMIT)]
+    Task._update_status(
+        t,
+        {
+            'event': 'apaevt_status_warning',
+            'body': {'message': 'warn-new'},
+        },
+    )
+    assert len(t._status.warnings) == CONST_STATUS_HISTORY_LIMIT
+    assert t._status.warnings[-1] == 'warn-new'
+    assert 'warn-0' not in t._status.warnings  # oldest evicted
 
 
 def test_update_status_download_event_sets_status_string():
